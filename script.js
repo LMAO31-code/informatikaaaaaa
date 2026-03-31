@@ -1,22 +1,22 @@
-// DOM Elements
 const expenseForm = document.getElementById('expenseForm');
 const amountInput = document.getElementById('amount');
 const categorySelect = document.getElementById('category');
 const descriptionInput = document.getElementById('description');
-const expenseTypeRadio = document.getElementById('expenseType');
-const incomeTypeRadio = document.getElementById('incomeType');
 const expenseHistory = document.getElementById('expenseHistory');
 const totalBalance = document.getElementById('totalBalance');
 const totalIncome = document.getElementById('totalIncome');
 const totalExpenses = document.getElementById('totalExpenses');
 const expenseChartCtx = document.getElementById('expenseChart').getContext('2d');
 
-// Format currency as Rp with thousand separators
+
+const radioButtons = document.querySelectorAll('input[name="transactionType"]');
+const expenseTypeRadio = document.querySelector('input[name="transactionType"][value="expense"]');
+const incomeTypeRadio = document.querySelector('input[name="transactionType"][value="income"]');
+
 function formatCurrency(amount) {
-    return 'Rp' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&.');
+    return 'Rp' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
 }
 
-// Transaction Class
 class Transaction {
     constructor(id, type, amount, category, description, date) {
         this.id = id;
@@ -28,12 +28,10 @@ class Transaction {
     }
 }
 
-// App State
 let transactions = [];
 let expenseChart = null;
 let negativeBalanceWarningShown = false;
 
-// Initialize the app
 function init() {
     loadTransactions();
     renderTransactions();
@@ -42,7 +40,6 @@ function init() {
     setupEventListeners();
 }
 
-// Load transactions from localStorage
 function loadTransactions() {
     const savedTransactions = localStorage.getItem('transactions');
     if (savedTransactions) {
@@ -50,12 +47,10 @@ function loadTransactions() {
     }
 }
 
-// Save transactions to localStorage
 function saveTransactions() {
     localStorage.setItem('transactions', JSON.stringify(transactions));
 }
 
-// Add a new transaction
 function addTransaction(type, amount, category, description) {
     const newTransaction = new Transaction(
         Date.now().toString(),
@@ -63,7 +58,7 @@ function addTransaction(type, amount, category, description) {
         parseFloat(amount),
         category,
         description,
-        new Date().toLocaleDateString()
+        new Date().toLocaleDateString('id-ID')
     );
     
     transactions.push(newTransaction);
@@ -73,10 +68,7 @@ function addTransaction(type, amount, category, description) {
     renderChart();
 }
 
-// Delete a transaction
 function deleteTransaction(id) {
-   
-    
     transactions = transactions.filter(transaction => transaction.id !== id);
     saveTransactions();
     renderTransactions();
@@ -84,29 +76,29 @@ function deleteTransaction(id) {
     renderChart();
 }
 
-// Render transactions to the table
 function renderTransactions() {
     expenseHistory.innerHTML = '';
     
     if (transactions.length === 0) {
-        expenseHistory.innerHTML = '<tr><td colspan="5" class="text-center py-4">No transactions yet</td></tr>';
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="5" style="text-align: center; padding: 1rem;">No transactions yet</td>';
+        expenseHistory.appendChild(row);
         return;
     }
     
     transactions.forEach(transaction => {
         const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
         
         row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap">${transaction.date}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${transaction.category}</td>
-            <td class="px-6 py-4 whitespace-nowrap">${transaction.description || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap ${transaction.type === 'income' ? 'income' : 'expense'}">
+            <td style="padding: 0.75rem 1.5rem;">${transaction.date}</td>
+            <td style="padding: 0.75rem 1.5rem;">${transaction.category}</td>
+            <td style="padding: 0.75rem 1.5rem;">${transaction.description || '-'}</td>
+            <td style="padding: 0.75rem 1.5rem; color: ${transaction.type === 'income' ? '#6d2932' : '#163832'}">
                 ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(Math.abs(transaction.amount))}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-                <button data-id="${transaction.id}" class="delete-btn text-red-500 hover:text-red-700">
-                    <i class="fas fa-trash"></i>
+            <td style="padding: 0.75rem 1.5rem;">
+                <button class="delete-btn" data-id="${transaction.id}" style="background: none; border: none; color: #6d2932;; cursor: pointer;">
+                    <i class="uil uil-trash-alt"></i>
                 </button>
             </td>
         `;
@@ -115,14 +107,13 @@ function renderTransactions() {
     });
 }
 
-// Show negative balance warning
 function showNegativeBalanceWarning() {
     if (!negativeBalanceWarningShown) {
         const warning = document.createElement('div');
         warning.id = 'balance-warning';
-        warning.className = 'bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 animate-fade-in';
+        warning.style.cssText = 'background-color: #fee; border-left: 4px solid #f00; color: #c00; padding: 1rem; margin-bottom: 1rem;';
         warning.innerHTML = `
-            <p class="font-bold">Peringatan!</p>
+            <p style="font-weight: bold;">Peringatan!</p>
             <p>Saldo Anda negatif. Harap tambahkan pemasukan atau kurangi pengeluaran.</p>
         `;
         document.querySelector('.container').prepend(warning);
@@ -130,7 +121,6 @@ function showNegativeBalanceWarning() {
     }
 }
 
-// Hide negative balance warning
 function hideNegativeBalanceWarning() {
     const warning = document.getElementById('balance-warning');
     if (warning) {
@@ -139,7 +129,6 @@ function hideNegativeBalanceWarning() {
     }
 }
 
-// Update the summary cards
 function updateSummary() {
     const incomes = transactions
         .filter(t => t.type === 'income')
@@ -155,19 +144,15 @@ function updateSummary() {
     totalExpenses.textContent = formatCurrency(expenses);
     totalBalance.textContent = formatCurrency(balance);
     
-    // Update balance color and warning
     if (balance < 0) {
-        totalBalance.classList.add('expense');
-        totalBalance.classList.remove('income');
+        totalBalance.style.color = '#163832';
         showNegativeBalanceWarning();
     } else {
-        totalBalance.classList.add('income');
-        totalBalance.classList.remove('expense');
+        totalBalance.style.color = '#6d2932';
         hideNegativeBalanceWarning();
     }
 }
 
-// Render the pie chart
 function renderChart() {
     if (expenseChart) {
         expenseChart.destroy();
@@ -179,7 +164,6 @@ function renderChart() {
         return;
     }
     
-    // Group expenses by category
     const categories = {};
     expenseData.forEach(t => {
         if (!categories[t.category]) {
@@ -191,9 +175,8 @@ function renderChart() {
     const labels = Object.keys(categories);
     const data = Object.values(categories);
     
-    // Generate colors for each category
     const backgroundColors = labels.map((_, i) => {
-        const hue = (i * 137.508) % 360; // Golden angle approximation
+        const hue = (i * 137.508) % 360;
         return `hsl(${hue}, 70%, 60%)`;
     });
     
@@ -229,49 +212,78 @@ function renderChart() {
     });
 }
 
-// Setup event listeners
 function setupEventListeners() {
-    // Use event delegation for delete buttons
+  
     expenseHistory.addEventListener('click', function(e) {
-        if (e.target.classList.contains('delete-btn') || e.target.closest('.delete-btn')) {
-            const button = e.target.classList.contains('delete-btn') ? e.target : e.target.closest('.delete-btn');
-            deleteTransaction(button.dataset.id);
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            deleteTransaction(deleteBtn.dataset.id);
         }
     });
+
 
     expenseForm.addEventListener('submit', function(e) {
         e.preventDefault();
         
-        const type = expenseTypeRadio.checked ? 'expense' : 'income';
+        const selectedType = document.querySelector('input[name="transactionType"]:checked');
+        
+        if (!selectedType) {
+            alert('Pilih tipe transaksi (Expense/Income)');
+            return;
+        }
+        
+        const type = selectedType.value;
         const amount = amountInput.value;
-        const category = type === 'expense' ? categorySelect.value : 'Income';
+        
+        if (!amount || parseFloat(amount) <= 0) {
+            alert('Harap masukkan jumlah yang valid');
+            return;
+        }
+        
+        let category = categorySelect.value;
         const description = descriptionInput.value;
         
-        if (!amount || (type === 'expense' && !category)) {
-            alert('Harap isi semua field yang diperlukan');
-            return;
+        if (type === 'expense') {
+            if (!category) {
+                alert('Harap pilih kategori');
+                return;
+            }
+        } else {
+            category = 'Income';
         }
         
         addTransaction(type, amount, category, description);
         
-        // Reset form
+      
         amountInput.value = '';
         descriptionInput.value = '';
-        if (type === 'expense') {
-            categorySelect.value = '';
-        }
+        categorySelect.value = '';
+        
+   
+        expenseTypeRadio.checked = true;
+        categorySelect.required = true;
+        
         amountInput.focus();
     });
-    
-    // Toggle category required based on transaction type
-    expenseTypeRadio.addEventListener('change', function() {
-        categorySelect.required = true;
+
+   
+    radioButtons.forEach(radio => {
+    radio.addEventListener('change', () => {
+        if (radio.value === 'expense') {
+            categorySelect.required = true;
+            categorySelect.disabled = false;
+        } else {
+            categorySelect.required = false;
+            categorySelect.disabled = false;
+            categorySelect.value = '';
+        }
     });
-    
-    incomeTypeRadio.addEventListener('change', function() {
-        categorySelect.required = false;
-    });
+});
+
+
+    expenseTypeRadio.checked = true;
+    categorySelect.required = true;
 }
 
-// Initialize the app when DOM is loaded
+
 document.addEventListener('DOMContentLoaded', init);
